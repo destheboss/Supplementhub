@@ -5,41 +5,79 @@ services:
     image: postgres:16-alpine
     container_name: product-db
     environment:
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${PRODUCT_DB_USERNAME}
+      POSTGRES_PASSWORD: ${PRODUCT_DB_PASSWORD}
+      POSTGRES_DB: ${PRODUCT_DB_NAME}
     volumes:
       - product_db_data:/var/lib/postgresql/data
     ports:
-      - "5433:5432"
+      - "${PRODUCT_DB_PORT}:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${PRODUCT_DB_USERNAME} -d ${PRODUCT_DB_NAME}" ]
       interval: 5s
       timeout: 3s
       retries: 10
     networks:
       - supplementhub-network
 
-  product-service:
+  product-backend:
     build:
       context: ./services/product-service
       dockerfile: Dockerfile
-    container_name: product-service
+    container_name: product-backend
     restart: always
     depends_on:
       product-db:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://product-db:5432/${DB_NAME}
-      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://product-db:5432/${PRODUCT_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${PRODUCT_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${PRODUCT_DB_PASSWORD}
     ports:
-      - "8080:8080"
+      - "${PRODUCT_APP_PORT}:8080"
+    networks:
+      - supplementhub-network
+
+  order-db:
+    image: postgres:16-alpine
+    container_name: order-db
+    environment:
+      POSTGRES_USER: ${ORDER_DB_USERNAME}
+      POSTGRES_PASSWORD: ${ORDER_DB_PASSWORD}
+      POSTGRES_DB: ${ORDER_DB_NAME}
+    volumes:
+      - order_db_data:/var/lib/postgresql/data
+    ports:
+      - "${ORDER_DB_PORT}:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${ORDER_DB_USERNAME} -d ${ORDER_DB_NAME}" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - supplementhub-network
+
+  order-backend:
+    build:
+      context: ./services/order-service
+      dockerfile: Dockerfile
+    container_name: order-backend
+    restart: always
+    depends_on:
+      order-db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://order-db:5432/${ORDER_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${ORDER_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${ORDER_DB_PASSWORD}
+    ports:
+      - "${ORDER_APP_PORT}:8080"
     networks:
       - supplementhub-network
 
 volumes:
   product_db_data: {}
+  order_db_data: {}
 
 networks:
   supplementhub-network:
