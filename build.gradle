@@ -1,5 +1,30 @@
-allprojects {
-    repositories {
-        mavenCentral()
+plugins {
+    id 'jacoco'
+    id "org.sonarqube" version "5.1.0.4882" apply false
+}
+
+subprojects {
+    apply plugin: "jacoco"
+    apply plugin: "org.sonarqube"
+
+    plugins.withId("java") {
+        tasks.named("test") {
+            useJUnitPlatform()
+            finalizedBy("jacocoTestReport")
+        }
+
+        tasks.named("jacocoTestReport") {
+            dependsOn("test")
+            reports {
+                xml.required = true
+                html.required = true
+            }
+        }
+
+        repositories { mavenCentral() }
     }
+}
+
+tasks.register("allTests") {
+    dependsOn(gradle.includedBuilds.collect { it.task(":test") })
 }
